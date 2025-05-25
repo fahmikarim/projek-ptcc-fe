@@ -1,0 +1,1 @@
+export const REACT_APP_BACKEND_URL="https://newsapp-backend-140099475583.us-central1.run.app/api"

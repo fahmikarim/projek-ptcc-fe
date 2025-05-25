@@ -1,41 +1,41 @@
+# cloudbuild.yaml (di akar folder proyek frontend Anda)
+
 steps:
-  # Step 1: Install dependencies
-  - name: "gcr.io/cloud-builders/npm"
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        if [ ! -d "node_modules" ]; then
-          echo "Installing dependencies..."
-          npm ci
-        else
-          echo "Skipping npm install, node_modules exists."
-        fi
-    dir: "."
-    volumes:
-      - name: "npm-cache"
-        path: /root/.npm
+  # Step 1: Install dependencies (npm ci)
+  # 'npm ci' adalah yang direkomendasikan untuk CI/CD karena menginstal dependensi
+  # berdasarkan package-lock.json, memastikan build yang konsisten.
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['ci'] # Menginstal dependensi
+    dir: '.' # Direktori tempat package.json berada
 
-  # Step 2: Build frontend 
-  - name: "gcr.io/cloud-builders/npm"
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        echo "Building React app..."
-        npm run build
-        echo "Build completed. Checking build folder:"
-        ls -la build/
-    dir: "."
-    volumes:
-      - name: "npm-cache"
-        path: /root/.npm
+  # Step 2: Build the React application
+  # Variabel lingkungan REACT_APP_BACKEND_URL disuntikkan di sini
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+    dir: '.' # Direktori tempat package.json berada
+    env:
+      # REACT_APP_BACKEND_URL akan mendapatkan nilainya dari variabel substitusi _REACT_APP_BACKEND_URL
+      - 'REACT_APP_BACKEND_URL=${_REACT_APP_BACKEND_URL}'
 
-  # Step 3: Deploy ke App Engine
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
-    args: ["app", "deploy", "--quiet"]
-    dir: "."
+  # Step 3: Deploy to App Engine
+  # Google Cloud SDK tools (gcloud) digunakan untuk deploy
+  # app.yaml harus ada di root direktori yang sama dengan cloudbuild.yaml
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Perintah gcloud app deploy akan otomatis menemukan app.yaml di direktori saat ini (.)
+        # ${PROJECT_ID} adalah variabel substitusi otomatis dari Cloud Build
+        gcloud app deploy --project=${PROJECT_ID} --quiet
+    timeout: '1200s' # Tingkatkan timeout untuk deployment yang mungkin memakan waktu lama
+
+# Definisi variabel substitusi khusus
+# Anda harus memberikan nilai untuk ini saat memicu build (misalnya melalui gcloud builds submit atau Cloud Build Trigger UI)
+substitutions:
+  # GANTI INI DENGAN URL BACKEND ANDA YANG SUDAH DI-DEPLOY
+  # PASTIKAN ADA '/api' DI AKHIRNYA!
+  _REACT_APP_BACKEND_URL: 'https://newsapp-backend-140099475583.us-central1.run.app/api'
 
 options:
   logging: CLOUD_LOGGING_ONLY

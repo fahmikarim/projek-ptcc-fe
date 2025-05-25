@@ -1,41 +1,45 @@
+# cloudbuild.yaml (di akar folder proyek frontend Anda)
+
 steps:
-  # Step 1: Install dependencies
-  - name: "gcr.io/cloud-builders/npm"
-    entrypoint: bash
+  # Step 1: Install dependencies (npm install)
+  # Menggunakan 'npm ci' untuk instalasi yang lebih bersih di CI/CD
+  # 'npm ci' membutuhkan package-lock.json
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['ci'] # Atau 'install' jika 'npm ci' bermasalah
+    dir: '.' # Direktori tempat package.json berada
+
+  # Step 2: Build the React application
+  # Variabel lingkungan REACT_APP_BACKEND_URL disuntikkan di sini
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+    dir: '.' # Direktori tempat package.json berada
+    env:
+      # REACT_APP_BACKEND_URL akan mendapatkan nilainya dari variabel substitusi _REACT_APP_BACKEND_URL
+      - 'REACT_APP_BACKEND_URL=${_REACT_APP_BACKEND_URL}'
+
+  # Step 3: Deploy to App Engine
+  # Google Cloud SDK tools (gcloud) digunakan untuk deploy
+  # app.yaml harus ada di root direktori yang sama dengan cloudbuild.yaml
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
     args:
-      - -c
+      - '-c'
       - |
-        if [ ! -d "node_modules" ]; then
-          echo "Installing dependencies..."
-          npm ci
-        else
-          echo "Skipping npm install, node_modules exists."
-        fi
-    dir: "."
-    volumes:
-      - name: "npm-cache"
-        path: /root/.npm
+        # Perintah gcloud app deploy akan otomatis menemukan app.yaml di direktori saat ini (.)
+        # ${PROJECT_ID} adalah variabel substitusi otomatis dari Cloud Build
+        gcloud app deploy --project=${PROJECT_ID} --quiet
+    timeout: '1200s' # Tingkatkan timeout untuk deployment yang mungkin memakan waktu lama
 
-  # Step 2: Build frontend 
-  - name: "gcr.io/cloud-builders/npm"
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        echo "Building React app..."
-        npm run build
-        echo "Build completed. Checking build folder:"
-        ls -la build/
-    dir: "."
-    volumes:
-      - name: "npm-cache"
-        path: /root/.npm
+# Definisi variabel substitusi khusus
+# Anda harus memberikan nilai untuk ini saat memicu build (misalnya melalui gcloud builds submit atau Cloud Build Trigger UI)
+substitutions:
+  # GANTI INI DENGAN URL BACKEND ANDA YANG SUDAH DI-DEPLOY
+  # PASTIKAN ADA '/api' DI AKHIRNYA!
+  _REACT_APP_BACKEND_URL: 'https://newsapp-backend-140099475583.us-central1.run.app/api'
 
-  # Step 3: Deploy ke App Engine
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
-    args: ["app", "deploy", "--quiet"]
-    dir: "."
-
+# Opsional: Konfigurasi cache untuk npm agar build lebih cepat
 options:
   logging: CLOUD_LOGGING_ONLY
+  # machineType: 'E2_HIGHCPU_8' # Bisa pakai machineType yang lebih besar untuk build lebih cepat
+# caches:
+#   - npm

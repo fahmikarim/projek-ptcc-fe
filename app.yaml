@@ -1,5 +1,5 @@
 runtime: nodejs20
-service: frontend-fahmi-028 
+service: projek-akhir-fe
 instance_class: F1
 
 handlers:

@@ -1,10 +1,11 @@
 // src/services/api.js
 import axios from 'axios';
+import { REACT_APP_BACKEND_URL } from "../utils/helpers.js";
 
 // Dapatkan URL backend dari variabel lingkungan
 // Pastikan Anda membuat file .env di root folder frontend Anda
 // Contoh: REACT_APP_BACKEND_URL=http://localhost:5000/api
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000/api';
+const API_BASE_URL = REACT_APP_BACKEND_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

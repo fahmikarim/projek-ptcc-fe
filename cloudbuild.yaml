@@ -5,7 +5,7 @@ steps:
   # 'npm ci' adalah yang direkomendasikan untuk CI/CD karena menginstal dependensi
   # berdasarkan package-lock.json, memastikan build yang konsisten.
   - name: 'gcr.io/cloud-builders/npm'
-    args: ['ci'] # Menginstal dependensi
+    args: ['install'] # Menginstal dependensi
     dir: '.' # Direktori tempat package.json berada
 
   # Step 2: Build the React application

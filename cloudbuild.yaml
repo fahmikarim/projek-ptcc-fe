@@ -1,34 +1,41 @@
-# cloudbuild.yaml (di akar folder proyek frontend Anda)
-
 steps:
-  # Step 1: Install dependencies (npm ci)
-  # 'npm ci' adalah yang direkomendasikan untuk CI/CD karena menginstal dependensi
-  # berdasarkan package-lock.json, memastikan build yang konsisten.
-  # Jika Anda tidak memiliki package-lock.json atau ada masalah, bisa ganti dengan 'npm install'.
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['ci'] # Menginstal dependensi
-    dir: '.' # Direktori tempat package.json berada
-
-  # Step 2: Build the React application
-  # Variabel lingkungan REACT_APP_BACKEND_URL disuntikkan di sini
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['run', 'build']
-    dir: '.' # Direktori tempat package.json berada
-    env:
-      - 'REACT_APP_BACKEND_URL=${_REACT_APP_BACKEND_URL}'
-
-  # Step 3: Deploy to App Engine
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
+  # Step 1: Install dependencies
+  - name: "gcr.io/cloud-builders/npm"
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
-        gcloud app deploy --project=${PROJECT_ID} --quiet
-    timeout: '1200s'
+        if [ ! -d "node_modules" ]; then
+          echo "Installing dependencies..."
+          npm ci
+        else
+          echo "Skipping npm install, node_modules exists."
+        fi
+    dir: "."
+    volumes:
+      - name: "npm-cache"
+        path: /root/.npm
 
-# Definisi variabel substitusi khusus
-substitutions:
-  _REACT_APP_BACKEND_URL: 'https://newsapp-backend-140099475583.us-central1.run.app/api' # GANTI INI DENGAN URL BACKEND ANDA YANG SUDAH DI-DEPLOY
+  # Step 2: Build frontend 
+  - name: "gcr.io/cloud-builders/npm"
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "Building React app..."
+        npm run build
+        echo "Build completed. Checking build folder:"
+        ls -la build/
+    dir: "."
+    volumes:
+      - name: "npm-cache"
+        path: /root/.npm
+
+  # Step 3: Deploy ke App Engine
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args: ["app", "deploy", "--quiet"]
+    dir: "."
 
 options:
   logging: CLOUD_LOGGING_ONLY
